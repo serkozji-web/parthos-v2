@@ -3,21 +3,26 @@ const cors = require('cors');
 const path = require('path');
 
 const app = express();
+
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Serwowanie Twojego HTMLa jako strony głównej
+// Statyczne pliki (frontend)
 app.use(express.static('public'));
 
-// API dla projektów
+// API
 app.use('/api/projects', require('./routes/projects'));
 
-// Każdy inny adres kieruje do strony głównej
-app.get('*', (req, res) => {
+// Fallback dla SPA (MUSI być na końcu)
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Port
 const PORT = process.env.PORT || 10000;
+
+// Start serwera
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Parthos V2 Online on port ${PORT}`);
 });

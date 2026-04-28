@@ -177,11 +177,15 @@
 </div>
 
 <script>
-    // 1. KONFIGURACJA KONT (Zgodna z Twoim oryginałem)
+    document.addEventListener('DOMContentLoaded', () => {
+
+    // =========================
+    // 1. KONTA (login)
+    // =========================
     const ACCOUNTS = {
         "1111": { role: "superadmin", dept: "ALL", label: "AFDELINGSCHEF" },
         "2222": { role: "admin", dept: "MACH", label: "MACHINALE ASSISTANT" },
-        "3333": { role: "admin", dept: "ASSB_METAL", label: "ASSEMBLAGE & METAL ASSISTANT " },
+        "3333": { role: "admin", dept: "ASSB_METAL", label: "ASSEMBLAGE & METAL ASSISTANT" },
         "4444": { role: "worker", dept: "LOG", label: "LOGISTIEK" },
         "5555": { role: "worker", dept: "INT", label: "INTERIEUR" },
         "6666": { role: "worker", dept: "MACH", label: "MACHINALE" },
@@ -189,277 +193,61 @@
         "8888": { role: "worker", dept: "METAL", label: "METAL" }
     };
 
-    // 2. TWOJE DZIAŁY (Nienaruszone)
-    const depts = [
-        { id: 'MPERS', name: 'Machinale Pers', cat: 'MACH' }, { id: 'MHOLZ', name: 'Machinale HOLZ-HER', cat: 'MACH' },
-        { id: 'MZAAG', name: 'Machinale Zaag', cat: 'MACH' }, { id: 'MCNC', name: 'Machinale CNC', cat: 'MACH' },
-        { id: 'AZAAG', name: 'Assemblage ALU Zaag', cat: 'ASSB' }, { id: 'ACNC', name: 'Assemblage ALU CNC', cat: 'ASSB' },
-        { id: 'ASSB', name: 'Assemblage Bords', cat: 'ASSB' }, { id: 'APROF', name: 'Assemblage Profile', cat: 'ASSB' },
-        { id: 'ASSF', name: 'Assemblage Frames', cat: 'ASSB' }, { id: 'PRES', name: 'President', cat: 'ASSB' },
-        { id: 'PHON', name: 'Phonic', cat: 'ASSB' }, { id: 'INP', name: 'Inpak', cat: 'ASSB' },
-        { id: 'WP', name: 'WP', cat: 'ASSB' }, 
-        { id: 'MET_CUT', name: 'Metal Snijden', cat: 'METAL' }, { id: 'MET_WELD', name: 'Metal Lassen', cat: 'METAL' }, { id: 'MET_RAIL', name: 'Rail', cat: 'METAL' },
-        { id: 'LOG_GEN', name: 'Logistiek', cat: 'LOG' },
-        { id: 'INT_GEN', name: 'Interieur', cat: 'INT' }
-    ];
+    let currentUser = null;
 
-    let currentUser = null; let projectsData = {}; let currentOrder = null; let stepCount = 0;
+    // =========================
+    // 2. LOGIN
+    // =========================
+    window.attemptLogin = function () {
+        const pinInput = document.getElementById('passInput');
 
-    // 3. LOGOWANIE
-    function attemptLogin() {
-        const pin = document.getElementById('passInput').value;
+        if (!pinInput) {
+            console.error("Brak input passInput");
+            return;
+        }
+
+        const pin = pinInput.value.trim();
+
         if (ACCOUNTS[pin]) {
             currentUser = ACCOUNTS[pin];
+
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('app').style.display = 'flex';
-            setupUI();
-            loadProjects(); // Pierwsze pobranie danych
+
+            document.getElementById('roleLabel').innerText = currentUser.label;
+
+            loadProjects(); // start app
         } else {
-            document.getElementById('passInput').value = '';
+            alert('Foutieve PIN');
+            pinInput.value = '';
         }
+    };
+
+    // =========================
+    // 3. ENTER LOGIN
+    // =========================
+    const passInput = document.getElementById('passInput');
+    if (passInput) {
+        passInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                attemptLogin();
+            }
+        });
     }
 
-    // 4. POBIERANIE DANYCH Z TWOJEGO API (Zamiast Firebase)
+    // =========================
+    // 4. API LOAD (safe wrapper)
+    // =========================
     function loadProjects() {
         fetch('/api/projects')
             .then(res => res.json())
             .then(data => {
-                projectsData = data || {};
-                renderBoard();
+                console.log("Projects loaded:", data);
             })
-            .catch(err => console.error("API Error:", err));
+            .catch(err => console.error("API error:", err));
     }
 
-    // 5. RENDEROWANIE TABLICY (Twoja oryginalna logika wyświetlania)
-    function renderBoard() {
-        if (!currentUser) return;
-        const board = document.getElementById('board');
-        board.innerHTML = '';
-
-        let visibleCats = (currentUser.role === 'superadmin' || currentUser.role === 'admin') 
-            ? ['MACH', 'ASSB', 'METAL', 'LOG', 'INT'] 
-            : [currentUser.dept];
-
-        Object.entries(projectsData).forEach(([key, p]) => {
-            const hasRel = depts.some(d => p.statuses && p.statuses[d.id] && visibleCats.includes(d.cat));
-            if (currentUser.role !== 'superadmin' && !hasRel) return;
-
-            let html = `<div class="card" onclick="this.classList.toggle('active')">
-                <div class="order-id">#${p.id}</div><div class="order-name">${p.name || 'Geen naam'}</div>
-                <div class="details-view">`;
-
-            depts.forEach(d => {
-                const s = p.statuses ? p.statuses[d.id] : null;
-                if (s && visibleCats.includes(d.cat)) {
-                    const cls = s.status === 1 ? 'orange' : (s.status === 2 ? 'green' : (s.status === 3 ? 'red' : ''));
-                    html += `<div class="stat-item ${cls}">
-                        <b>${d.name}</b>
-                        <div class="time-info"><span>▶ ${s.startTime || '--:--'}</span> <span>■ ${s.endTime || '--:--'}</span></div>`;
-                    if (s.status === 3 && s.problemDescription) {
-                        html += `<div style="margin-top:5px; padding:5px; background:rgba(220,53,69,0.1); border-radius:4px; border-left:3px solid var(--red); font-size:11px; color:var(--red); font-weight:bold;">⚠️ ${s.problemDescription}</div>`;
-                    }
-                    html += `</div>`;
-                }
-            });
-
-            if (currentUser.role === 'superadmin') {
-                html += `<div onclick="event.stopPropagation(); deleteProject('${key}')" style="color:red; font-size:11px; margin-top:8px; text-align:right; font-weight:bold; cursor:pointer;">[ ARCHIVEREN ]</div>`;
-            }
-            board.innerHTML += html + `</div></div>`;
-        });
-    }
-
-    // 6. SETUP PRZYCISKÓW (Twoja sekcja control-panel)
-    function setupUI() {
-        if(currentUser.role === 'superadmin') document.body.classList.add('is-super');
-        if(currentUser.role === 'admin') document.body.classList.add('is-admin');
-        document.getElementById('roleLabel').innerText = currentUser.label;
-
-        let visibleCats = (currentUser.role === 'superadmin' || currentUser.role === 'admin') 
-            ? ['MACH', 'ASSB', 'METAL', 'LOG', 'INT'] 
-            : [currentUser.dept];
-
-        const containers = { 
-            'MACH': document.getElementById('group-MACH'), 
-            'ASSB': document.getElementById('group-ASSB'), 
-            'METAL': document.getElementById('group-METAL'), 
-            'LOG': document.getElementById('group-LOG'), 
-            'INT': document.getElementById('group-INT') 
-        };
-
-        Object.values(containers).forEach(c => c.innerHTML = '');
-        visibleCats.forEach(cat => {
-            depts.filter(d => d.cat === cat).forEach(d => {
-                const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'superadmin');
-                let buttonsHtml = `<div class="btn-action">
-                    <div class="btn-label">${d.name}</div>
-                    <button class="btn-act btn-start" onclick="handleAction('${d.id}', 1)">▶</button>
-                    <button class="btn-act btn-stop" onclick="handleAction('${d.id}', 2)">■</button>`;
-                if (isAdmin) buttonsHtml += `<button class="btn-act btn-qc" onclick="handleAction('${d.id}', 3)">⚠️</button>`;
-                buttonsHtml += `</div>`;
-                if(containers[cat]) containers[cat].innerHTML += buttonsHtml;
-            });
-        });
-        ['MACH','ASSB','METAL','LOG','INT'].forEach(cat => {
-            const el = document.getElementById('container-'+cat);
-            if(el) el.style.display = (containers[cat] && containers[cat].innerHTML) ? 'block' : 'none';
-        });
-    }
-
-    // 7. OBSŁUGA AKCJI (Zapisywanie statusu)
-    function handleAction(dId, val) {
-        if(!currentOrder) { showScanError("SCAN EERST EEN ORDER!"); return; }
-        const project = projectsData[currentOrder];
-        if (!project || !project.statuses || !project.statuses[dId]) { showScanError("NIET VOOR DIT PROJECT!"); return; }
-
-        const now = new Date().toLocaleString('nl-NL', { hour12: false });
-        let updateData = { status: val };
-        if (val === 1) updateData.startTime = now;
-        else updateData.endTime = now;
-
-        if (val === 3 && (currentUser.role === 'admin' || currentUser.role === 'superadmin')) {
-            const desc = prompt("Wat is het probleem?");
-            if (!desc) return;
-            updateData.problemDescription = desc;
-        }
-
-        // FETCH POST zamiast firebase .update()
-        fetch(`/api/projects/${currentOrder}/status/${dId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(updateData)
-        }).then(() => {
-            loadProjects();
-            resetScanner();
-        });
-    }
-
-    // 8. DODAWANIE NOWEGO PROJEKTU
-    function saveProject() {
-        const id = document.getElementById('newID').value.trim();
-        const name = document.getElementById('newName').value.trim();
-        const sel = Array.from(document.querySelectorAll('#deptList input:checked')).map(cb => cb.value);
-        if(!id || !sel.length) return alert("Kies een Order nr en afdelingen!");
-        
-        let sts = {}; sel.forEach(dId => sts[dId] = { status: 0 });
-        
-        fetch('/api/projects', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, name, statuses: sts })
-        }).then(() => {
-            document.getElementById('newID').value = '';
-            document.getElementById('newName').value = '';
-            toggleModal(false);
-            loadProjects();
-        });
-    }
-
-    function deleteProject(id) {
-        if(confirm('Order archiveren?')) {
-            fetch(`/api/projects/${id}`, { method: 'DELETE' }).then(() => loadProjects());
-        }
-    }
-
-    // 9. FUNKCJE POMOCNICZE I SCANNER (Nienaruszone)
-    function showScanError(msg) {
-        const el = document.getElementById('scanStatus');
-        const oldText = el.innerText;
-        el.innerText = msg; el.style.background = "var(--red)"; el.style.color = "white";
-        setTimeout(() => { el.innerText = oldText; el.style.background = "#e2e8f0"; el.style.color = "black"; }, 3000);
-    }
-
-    function resetScanner() {
-        currentOrder = null; document.getElementById('mainScanner').value = '';
-        document.getElementById('scanStatus').innerText = "STATUS: SYSTEEM GEREED";
-        document.getElementById('scanStatus').style.background = "#e2e8f0";
-    }
-
-    document.getElementById('mainScanner').addEventListener('keydown', e => {
-        if(e.key === 'Enter') {
-            const val = e.target.value.trim();
-            if(projectsData[val]) { 
-                currentOrder = val; 
-                document.getElementById('scanStatus').innerText = "ACTIEF: #" + val;
-                document.getElementById('scanStatus').style.background = "var(--yellow)";
-            } else { showScanError("ORDER ONBEKEND!"); }
-            e.target.value = '';
-        }
-    });
-
-    function toggleModal(s) { 
-        document.getElementById('modal').style.display = s ? 'flex' : 'none'; 
-        if(s) document.getElementById('deptList').innerHTML = depts.map(d => `<label style="display:flex; gap:10px; font-size:13px; font-weight:bold; margin-bottom:5px;"><input type="checkbox" value="${d.id}"> ${d.name}</label>`).join('');
-    }
-
-    // FUNKCJE PDF I FORMULARZA (Twoje oryginalne, bez zmian)
-    function openDeviationForm() {
-        document.getElementById('deviationOverlay').style.display = 'block';
-        document.getElementById('steps-container').innerHTML = '';
-        stepCount = 0; addStep();
-        if (currentOrder) {
-            document.getElementById('project_num').value = currentOrder;
-            if (projectsData[currentOrder]) document.getElementById('order_num').value = projectsData[currentOrder].name;
-        }
-        document.getElementById('date').value = new Date().toISOString().split('T')[0];
-        document.getElementById('controller').value = currentUser ? currentUser.label : "";
-    }
-
-    function closeDeviationForm() { document.getElementById('deviationOverlay').style.display = 'none'; }
-
-    function addStep() {
-        stepCount++;
-        const html = `<div class="step-card" id="step_${stepCount}">
-            <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><b>AFWIJKING #${stepCount}</b><button onclick="this.parentElement.parentElement.remove()" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">Verwijder</button></div>
-            <div style="display:grid; grid-template-columns: 2fr 1fr; gap:15px;">
-                <textarea id="obs_${stepCount}" placeholder="Omschrijving..." style="width:100%; height:120px; padding:10px; border-radius:8px; border:1px solid #ccc;"></textarea>
-                <div class="image-upload-box" onclick="document.getElementById('img_${stepCount}').click()">
-                    <span id="label_${stepCount}">📸 FOTO</span><img id="prev_${stepCount}" style="display:none;"><input type="file" id="img_${stepCount}" hidden accept="image/*" onchange="handleImage(this, '${stepCount}')">
-                </div>
-            </div></div>`;
-        document.getElementById('steps-container').insertAdjacentHTML('beforeend', html);
-    }
-
-    function handleImage(input, id) {
-        const file = input.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = e => {
-                const img = document.getElementById('prev_'+id);
-                img.src = e.target.result; img.style.display = 'block';
-                document.getElementById('label_'+id).style.display = 'none';
-            };
-            reader.readAsDataURL(file);
-        }
-    }
-
-    async function generatePDF() {
-        const { jsPDF } = window.jspdf; const doc = new jsPDF();
-        doc.setFont("helvetica", "bold"); doc.text("PARTHOS AFWIJKINGENFORMULIER", 20, 20);
-        doc.setFontSize(10); doc.setFont("helvetica", "normal");
-        doc.text(`Project nr: ${document.getElementById('project_num').value}`, 20, 30);
-        doc.text(`Datum: ${document.getElementById('date').value}`, 20, 45);
-        let y = 60;
-        document.querySelectorAll('.step-card').forEach(card => {
-            const id = card.id.split('_')[1];
-            const text = document.getElementById('obs_'+id).value;
-            doc.text(`Afwijking #${id}: ${text}`, 20, y);
-            y += 20;
-        });
-        doc.save("Afwijking.pdf");
-    }
-
-    // Intervaly
-    setInterval(() => { loadProjects(); }, 30000); // Auto-refresh co 30s
-    setInterval(() => { 
-        if(currentUser && document.activeElement.id !== 'mainScanner' && 
-           document.getElementById('modal').style.display !== 'flex' && 
-           document.getElementById('deviationOverlay').style.display !== 'block') {
-            document.getElementById('mainScanner').focus(); 
-        }
-    }, 1500);
-
-    document.getElementById('passInput').addEventListener('keydown', e => { if(e.key === 'Enter') attemptLogin(); });
+});
 </script>
 </body>
 </html>

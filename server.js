@@ -14,8 +14,11 @@ app.use(express.static('public'));
 // API
 app.use('/api/projects', require('./routes/projects'));
 
-// Fallback dla SPA (MUSI być na końcu)
-app.use((req, res) => {
+// Fallback dla SPA (Naprawiony błąd SyntaxError)
+app.get('(.*)', (req, res) => {
+  if (req.path.includes('.')) {
+    return res.status(404).send('Not found');
+  }
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 

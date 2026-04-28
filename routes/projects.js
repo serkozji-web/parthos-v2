@@ -23,4 +23,26 @@ router.get('/', (req, res) => {
   res.json(projects);
 });
 
+// Aktualizacja statusu projektu
+router.post('/:id/status/:dept', (req, res) => {
+  const { id, dept } = req.params;
+  const { status, startTime, endTime } = req.body;
+  
+  if (!projects[id]) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  
+  if (!projects[id].statuses) {
+    projects[id].statuses = {};
+  }
+  
+  projects[id].statuses[dept] = {
+    status,
+    startTime: startTime || projects[id].statuses[dept]?.startTime,
+    endTime: endTime || projects[id].statuses[dept]?.endTime
+  };
+  
+  res.json(projects[id]);
+});
+
 module.exports = router;

@@ -8,16 +8,18 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Statyczne pliki (frontend)
-app.use(express.static('public'));
-
-// API
+// API - musi być PRZED static
 app.use('/api/projects', require('./routes/projects'));
 
-// Fallback dla SPA (Naprawiony błąd SyntaxError)
-app.get('*', (req, res) => {
-    if (req.path.includes('.')) return res.status(404).send('Not found');
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Statyczne pliki (frontend) - z fallthrough: false
+app.use(express.static('public', { fallthrough: false }));
+
+// Fallback dla SPA - tylko dla tras bez rozszerzenia
+app.use((req, res) => {
+    if (!req.path.includes('.')) {
+        return res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    }
+    res.status(404).send('Not found');
 });
 
 // Port

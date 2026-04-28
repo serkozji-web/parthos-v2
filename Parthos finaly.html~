@@ -3,94 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <title>Parthos Productie Management</title>
-    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    
     <style>
         :root { 
             --primary: #005581; --secondary: #00a1e1; --bg-color: #f0f4f8; 
             --white: #ffffff; --orange: #ffa500; --green: #28a745; 
             --red: #dc3545; --yellow: #ffc107; --dark: #1e293b; 
         }
-
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', 'Segoe UI', sans-serif; background-color: var(--bg-color); height: 100vh; overflow: hidden; }
-
-        /* LOGIN SCREEN */
         #loginOverlay { position: fixed; inset: 0; background: #0f172a; display: flex; justify-content: center; align-items: center; z-index: 2000; }
         .login-box { background: white; padding: 40px; border-radius: 20px; width: 350px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
         .login-box input { width: 100%; padding: 15px; margin-bottom: 15px; border-radius: 10px; border: 2px solid #ddd; font-size: 24px; text-align: center; outline: none; }
-        .login-box button { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; text-transform: uppercase; }
-
-        /* APP LAYOUT */
+        .login-box button { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
         #app { display: none; height: 100vh; flex-direction: column; }
-        .header { background: var(--dark); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; color: white; border-bottom: 2px solid var(--secondary); }
+        .header { background: var(--dark); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; color: white; }
         .main-dashboard { flex: 1; padding: 15px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; overflow-y: auto; }
-        
-        /* CARDS */
-        .card { background: var(--white); border-radius: 6px; padding: 8px 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 6px solid #cbd5e1; cursor: pointer; transition: 0.2s; height: fit-content; }
-        .card.active { transform: scale(1.01); padding: 12px; border-left-width: 10px; }
+        .card { background: var(--white); border-radius: 6px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 6px solid #cbd5e1; cursor: pointer; }
         .card.active .order-name, .card.active .details-view { display: block; }
-        
-        .order-id { font-weight: 900; color: var(--primary); font-size: 20px; } 
-        .order-name { display: none; font-size: 14px; color: var(--secondary); margin-bottom: 8px; font-weight: bold; border-bottom: 1px solid #eee; padding-bottom: 4px; }
-        
+        .order-id { font-weight: 900; color: var(--primary); font-size: 20px; }
+        .order-name { display: none; font-size: 14px; font-weight: bold; margin-bottom: 8px; }
         .details-view { display: none; }
-        .stat-item { font-size: 13px; padding: 6px 8px; background: #f8fafc; border-radius: 4px; border: 1px solid #e2e8f0; margin-bottom: 4px; }
-        .stat-item b { font-size: 14px; display: block; margin-bottom: 2px; }
-        .time-info { font-size: 10px; color: #64748b; display: flex; justify-content: space-between; font-weight: 800; border-top: 1px dashed #cbd5e1; margin-top: 4px; padding-top: 2px; }
-
+        .stat-item { font-size: 13px; padding: 6px; background: #f8fafc; border-radius: 4px; margin-bottom: 4px; border: 1px solid #e2e8f0; }
         .stat-item.orange { background: #fff7ed; border-color: #fdba74; }
         .stat-item.green { background: #f0fdf4; border-color: #86efac; }
-        .stat-item.red { background: #fef2f2; border-color: var(--red); }
-
-        /* CONTROL PANEL */
-        .control-panel { background: var(--white); border-top: 4px solid var(--primary); padding: 12px 25px; }
-        .scanner-section { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; flex-wrap: nowrap; }
-        
-        #mainScanner { padding: 12px; font-size: 18px; border: 2px solid var(--primary); border-radius: 8px; width: 240px; outline: none; font-weight: bold; }
-        #scanStatus { font-weight: 900; font-size: 14px; background: #e2e8f0; padding: 12px 20px; border-radius: 8px; min-width: 220px; text-align: center; transition: 0.3s; }
-        
-        /* LEGENDA */
-        .legend-container { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
-        .legend { display: flex; gap: 20px; font-size: 13px; font-weight: 800; background: #f1f5f9; padding: 10px 18px; border-radius: 8px; border: 2px solid #cbd5e1; }
-        .instruction-text { 
-            font-size: 11px; color: var(--primary); font-weight: 800; 
-            background: #e0f2fe; padding: 6px 12px; border-radius: 6px; 
-            border-left: 5px solid var(--secondary); text-align: right;
-        }
-
-        .buttons-container { max-height: 220px; overflow-y: auto; padding-right: 10px; }
-        .dept-group { margin-bottom: 10px; }
-        .group-title { font-size: 11px; font-weight: 900; color: var(--primary); margin-bottom: 6px; text-transform: uppercase; border-bottom: 1px solid #eee; }
-        .buttons-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
-        
-        .btn-action { display: flex; background: white; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; height: 42px; }
-        .btn-label { flex: 1; font-size: 11px; font-weight: 800; padding: 4px; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1.2; }
-        .btn-act { border: none; width: 44px; color: white; cursor: pointer; font-size: 20px; font-weight: bold; }
-        .btn-start { background: var(--orange); } .btn-stop { background: var(--green); } .btn-qc { background: var(--yellow); color: black; }
-
-        #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 30px; border-radius: 20px; width: 500px; }
-
-        /* AFWIJKING FORM SPECIFIC */
-        .form-container { background: #fff; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-width: 950px; margin: 0 auto; }
-        .step-card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 10px; margin-bottom: 15px; position: relative; }
-        .image-upload-box { border: 2px dashed var(--secondary); border-radius: 8px; height: 120px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: #f0f9ff; overflow: hidden; }
-        .image-upload-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
-
-        .only-super, .only-admin { display: none !important; }
-        body.is-super .only-super { display: block !important; }
-        body.is-super .only-admin, body.is-admin .only-admin { display: block !important; }
+        .control-panel { background: var(--white); border-top: 4px solid var(--primary); padding: 15px; }
+        .scanner-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        #mainScanner { padding: 12px; font-size: 18px; border: 2px solid var(--primary); border-radius: 8px; width: 250px; }
+        .buttons-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+        .btn-action { display: flex; border: 1px solid #ddd; border-radius: 6px; overflow: hidden; }
+        .btn-label { flex: 1; font-size: 11px; font-weight: bold; display: flex; align-items: center; justify-content: center; padding: 5px; }
+        .btn-act { width: 40px; border: none; color: white; font-weight: bold; cursor: pointer; }
+        .btn-start { background: var(--orange); }
+        .btn-stop { background: var(--green); }
     </style>
 </head>
-<body id="mainBody">
+<body>
 
 <div id="loginOverlay">
     <div class="login-box">
-        <h2 style="margin-bottom:20px; color: var(--primary);">Parthos</h2>
-        <p style="margin-bottom: 15px; font-weight: 800; color: #64748b;">PRODUCTIE MANAGEMENT</p>
+        <h2>Parthos</h2>
+        <p>PRODUCTIE MANAGEMENT</p>
         <input type="password" id="passInput" placeholder="PINCODE" autofocus>
         <button onclick="attemptLogin()">INLOGGEN</button>
     </div>
@@ -98,156 +51,125 @@
 
 <div id="app">
     <div class="header">
-        <div>
-            <h4 style="font-size: 18px; font-weight: 900;">PARTHOS PRODUCTIE MANAGEMENT</h4>
-            <span id="roleLabel" style="font-size: 11px; opacity: 0.9; font-weight: bold; letter-spacing: 1px;"></span>
-        </div>
-        <div style="display: flex; gap: 10px; align-items: center;">
-            <button class="only-admin" style="background: var(--orange); color:white; border:none; padding:8px 15px; border-radius:8px; font-size: 11px; font-weight:bold; cursor:pointer;" onclick="openDeviationForm()">📋 AFWIJKING FORM</button>
-            <button class="only-super" style="background: var(--green); color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px;" onclick="toggleModal(true)">+ ORDER TOEVOEGEN</button>
-            <button onclick="location.reload()" style="background: rgba(255,255,255,0.1); color:white; border:none; padding:8px 15px; border-radius:8px; font-size: 11px; font-weight:bold;">LOGOUT</button>
-        </div>
+        <h4 id="roleLabel">PARTHOS MANAGEMENT</h4>
+        <button onclick="location.reload()" style="background:none; color:white; border:1px solid white; padding:5px 10px; border-radius:5px;">LOGOUT</button>
     </div>
-
     <div class="main-dashboard" id="board"></div>
-
     <div class="control-panel">
         <div class="scanner-section">
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <input type="text" id="mainScanner" placeholder="SCAN BARCODE..." autofocus autocomplete="off">
-                <div id="scanStatus">STATUS: SYSTEEM GEREED</div>
-            </div>
-
-            <div class="legend-container">
-                <div class="legend">
-                    <div><b style="color:var(--orange)">▶</b> START</div>
-                    <div><b style="color:var(--green)">■</b> KLAAR</div>
-                    <div><b style="color:var(--yellow)">⚠️</b> ONHOLD</div>
-                </div>
-                <div class="instruction-text">
-                    Scan order, klik <b>START</b> als begin met project of <b>STOP</b> als project is klaar.
-                </div>
-            </div>
+            <input type="text" id="mainScanner" placeholder="SCAN ORDER..." autocomplete="off">
+            <div id="scanStatus" style="font-weight:bold; background:#eee; padding:10px; border-radius:5px;">STATUS: GEREED</div>
         </div>
-        
-        <div class="buttons-container">
-            <div class="dept-group" id="container-MACH"><div class="group-title">🛠 1. Machinale</div><div class="buttons-grid" id="group-MACH"></div></div>
-            <div class="dept-group" id="container-ASSB"><div class="group-title">⚙ 2. Assemblage</div><div class="buttons-grid" id="group-ASSB"></div></div>
-            <div class="dept-group" id="container-METAL"><div class="group-title">🔩 3. Metal</div><div class="buttons-grid" id="group-METAL"></div></div>
-            <div class="dept-group" id="container-LOG"><div class="group-title">📦 4. Logistiek</div><div class="buttons-grid" id="group-LOG"></div></div>
-            <div class="dept-group" id="container-INT"><div class="group-title">🛋 5. Interieur</div><div class="buttons-grid" id="group-INT"></div></div>
-        </div>
-    </div>
-</div>
-
-<div id="modal">
-    <div class="modal-content">
-        <h2 style="margin-bottom: 20px;">Nieuwe Order Toevoegen</h2>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-            <input type="text" id="newID" placeholder="Order nr" style="padding:12px; border-radius:8px; border:1px solid #ccc;">
-            <input type="text" id="newName" placeholder="Project nr / Klant" style="padding:12px; border-radius:8px; border:1px solid #ccc;">
-        </div>
-        <div id="deptList" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; background:#f1f5f9; padding:15px; border-radius:10px; max-height: 250px; overflow-y: auto; margin-bottom: 20px;"></div>
-        <button onclick="saveProject()" style="width:100%; padding:15px; background:var(--primary); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">ORDER OPSLAAN</button>
-        <button onclick="toggleModal(false)" style="width:100%; margin-top:10px; background:none; border:none; color:gray; cursor:pointer;">Annuleren</button>
-    </div>
-</div>
-
-<div id="deviationOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:3000; overflow-y:auto; padding:20px;">
-    <div style="text-align: right; max-width: 950px; margin: 0 auto; margin-bottom: 10px;">
-        <button onclick="closeDeviationForm()" style="background:var(--red); color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">SLUITEN</button>
-    </div>
-    <div class="form-container">
-        <h2 style="color:var(--primary); margin-bottom:20px;">📍 AFWIJKINGENFORMULIER</h2>
-        
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px;">
-            <div><label style="font-size:12px; font-weight:bold;">Project nr:</label><input type="text" id="project_num" style="width:100%; padding:8px;"></div>
-            <div><label style="font-size:12px; font-weight:bold;">Klant/Order:</label><input type="text" id="order_num" style="width:100%; padding:8px;"></div>
-            <div><label style="font-size:12px; font-weight:bold;">Controleur:</label><input type="text" id="controller" style="width:100%; padding:8px;"></div>
-            <div><label style="font-size:12px; font-weight:bold;">Datum:</label><input type="date" id="date" style="width:100%; padding:8px;"></div>
-        </div>
-
-        <div id="steps-container"></div>
-
-        <div style="display:flex; gap:10px; margin-top:20px;">
-            <button onclick="addStep()" style="flex:1; padding:15px; background:var(--secondary); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">➕ AFWIJKING TOEVOEGEN</button>
-            <button onclick="generatePDF()" style="flex:1; padding:15px; background:var(--primary); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">📄 PDF GENEREREN</button>
-        </div>
+        <div class="buttons-grid" id="controls"></div>
     </div>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-
-    // =========================
-    // 1. KONTA (login)
-    // =========================
     const ACCOUNTS = {
-        "1111": { role: "superadmin", dept: "ALL", label: "AFDELINGSCHEF" },
-        "2222": { role: "admin", dept: "MACH", label: "MACHINALE ASSISTANT" },
-        "3333": { role: "admin", dept: "ASSB_METAL", label: "ASSEMBLAGE & METAL ASSISTANT" },
-        "4444": { role: "worker", dept: "LOG", label: "LOGISTIEK" },
-        "5555": { role: "worker", dept: "INT", label: "INTERIEUR" },
-        "6666": { role: "worker", dept: "MACH", label: "MACHINALE" },
-        "7777": { role: "worker", dept: "ASSB", label: "ASSEMBLAGE" },
-        "8888": { role: "worker", dept: "METAL", label: "METAL" }
+        "1111": { role: "superadmin", label: "AFDELINGSCHEF", dept: "ALL" },
+        "6666": { role: "worker", label: "MACHINALE", dept: "MACH" }
     };
+
+    const depts = [
+        { id: 'MPERS', name: 'Machinale Pers', cat: 'MACH' },
+        { id: 'MZAAG', name: 'Machinale Zaag', cat: 'MACH' },
+        { id: 'ASSB', name: 'Assemblage Bords', cat: 'ASSB' }
+    ];
 
     let currentUser = null;
+    let projectsData = {};
+    let currentOrder = null;
 
-    // =========================
-    // 2. LOGIN
-    // =========================
-    window.attemptLogin = function () {
-        const pinInput = document.getElementById('passInput');
-
-        if (!pinInput) {
-            console.error("Brak input passInput");
-            return;
-        }
-
-        const pin = pinInput.value.trim();
-
+    function attemptLogin() {
+        const pin = document.getElementById('passInput').value;
         if (ACCOUNTS[pin]) {
             currentUser = ACCOUNTS[pin];
-
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('app').style.display = 'flex';
-
             document.getElementById('roleLabel').innerText = currentUser.label;
-
-            loadProjects(); // start app
+            setupButtons();
+            loadProjects();
         } else {
-            alert('Foutieve PIN');
-            pinInput.value = '';
+            alert("Foutieve PIN");
+            document.getElementById('passInput').value = '';
         }
-    };
-
-    // =========================
-    // 3. ENTER LOGIN
-    // =========================
-    const passInput = document.getElementById('passInput');
-    if (passInput) {
-        passInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                attemptLogin();
-            }
-        });
     }
 
-    // =========================
-    // 4. API LOAD (safe wrapper)
-    // =========================
     function loadProjects() {
         fetch('/api/projects')
             .then(res => res.json())
             .then(data => {
-                console.log("Projects loaded:", data);
+                projectsData = data || {};
+                renderBoard();
             })
-            .catch(err => console.error("API error:", err));
+            .catch(err => console.error("Error:", err));
     }
 
-});
+    function renderBoard() {
+        const board = document.getElementById('board');
+        board.innerHTML = '';
+        Object.entries(projectsData).forEach(([key, p]) => {
+            let html = `<div class="card" onclick="this.classList.toggle('active')">
+                <div class="order-id">#${p.id}</div>
+                <div class="order-name">${p.name || ''}</div>
+                <div class="details-view">`;
+            
+            depts.forEach(d => {
+                const s = p.statuses ? p.statuses[d.id] : null;
+                if (s) {
+                    const cls = s.status === 1 ? 'orange' : (s.status === 2 ? 'green' : '');
+                    html += `<div class="stat-item ${cls}">
+                        <b>${d.name}</b>
+                        <div style="display:flex; justify-content:space-between; font-size:10px;">
+                            <span>▶ ${s.startTime || '--'}</span><span>■ ${s.endTime || '--'}</span>
+                        </div>
+                    </div>`;
+                }
+            });
+            board.innerHTML += html + `</div></div>`;
+        });
+    }
+
+    function setupButtons() {
+        const ctrl = document.getElementById('controls');
+        ctrl.innerHTML = '';
+        const visible = depts.filter(d => currentUser.role === 'superadmin' || d.cat === currentUser.dept);
+        visible.forEach(d => {
+            ctrl.innerHTML += `
+                <div class="btn-action">
+                    <div class="btn-label">${d.name}</div>
+                    <button class="btn-act btn-start" onclick="handleAction('${d.id}', 1)">▶</button>
+                    <button class="btn-act btn-stop" onclick="handleAction('${d.id}', 2)">■</button>
+                </div>`;
+        });
+    }
+
+    function handleAction(dId, val) {
+        if (!currentOrder) return alert("SCAN EERST ORDER!");
+        const now = new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+        fetch(`/api/projects/${currentOrder}/status/${dId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: val, [val === 1 ? 'startTime' : 'endTime']: now })
+        }).then(() => loadProjects());
+    }
+
+    document.getElementById('mainScanner').addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            const val = e.target.value.trim();
+            if (projectsData[val]) {
+                currentOrder = val;
+                document.getElementById('scanStatus').innerText = "ACTIEF: #" + val;
+                document.getElementById('scanStatus').style.background = "var(--orange)";
+            } else {
+                alert("ORDER ONBEKEND");
+            }
+            e.target.value = '';
+        }
+    });
+
+    setInterval(loadProjects, 10000);
 </script>
 </body>
 </html>
+

@@ -15,28 +15,27 @@
         #loginOverlay { position: fixed; inset: 0; background: #0f172a; display: flex; justify-content: center; align-items: center; z-index: 2000; }
         .login-box { background: white; padding: 40px; border-radius: 20px; width: 350px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
         .login-box input { width: 100%; padding: 15px; margin-bottom: 15px; border-radius: 10px; border: 2px solid #ddd; font-size: 24px; text-align: center; outline: none; }
-        .login-box button { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; text-transform: uppercase; }
+        .login-box button { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
         #app { display: none; height: 100vh; flex-direction: column; }
-        .header { background: var(--dark); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; color: white; border-bottom: 2px solid var(--secondary); }
+        .header { background: var(--dark); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; color: white; }
         .main-dashboard { flex: 1; padding: 15px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; overflow-y: auto; }
-        .card { background: var(--white); border-radius: 6px; padding: 8px 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 6px solid #cbd5e1; cursor: pointer; transition: 0.2s; height: fit-content; }
-        .card.active { transform: scale(1.01); padding: 12px; border-left-width: 10px; }
-        .order-id { font-weight: 900; color: var(--primary); font-size: 20px; } 
-        .order-name { display: none; font-size: 14px; color: var(--secondary); margin-bottom: 8px; font-weight: bold; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+        .card { background: var(--white); border-radius: 6px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 6px solid #cbd5e1; cursor: pointer; }
         .card.active .order-name, .card.active .details-view { display: block; }
+        .order-id { font-weight: 900; color: var(--primary); font-size: 20px; }
+        .order-name { display: none; font-size: 14px; font-weight: bold; margin-bottom: 8px; }
         .details-view { display: none; }
-        .stat-item { font-size: 13px; padding: 6px 8px; background: #f8fafc; border-radius: 4px; border: 1px solid #e2e8f0; margin-bottom: 4px; }
+        .stat-item { font-size: 13px; padding: 6px; background: #f8fafc; border-radius: 4px; margin-bottom: 4px; border: 1px solid #e2e8f0; }
         .stat-item.orange { background: #fff7ed; border-color: #fdba74; }
         .stat-item.green { background: #f0fdf4; border-color: #86efac; }
-        .control-panel { background: var(--white); border-top: 4px solid var(--primary); padding: 12px 25px; }
-        .scanner-section { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
-        #mainScanner { padding: 12px; font-size: 18px; border: 2px solid var(--primary); border-radius: 8px; width: 240px; outline: none; font-weight: bold; }
-        #scanStatus { font-weight: 900; font-size: 14px; background: #e2e8f0; padding: 12px 20px; border-radius: 8px; min-width: 220px; text-align: center; }
-        .buttons-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
-        .btn-action { display: flex; background: white; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; height: 42px; }
-        .btn-label { flex: 1; font-size: 11px; font-weight: 800; padding: 4px; display: flex; align-items: center; justify-content: center; text-align: center; }
-        .btn-act { border: none; width: 44px; color: white; cursor: pointer; font-size: 20px; font-weight: bold; }
-        .btn-start { background: var(--orange); } .btn-stop { background: var(--green); }
+        .control-panel { background: var(--white); border-top: 4px solid var(--primary); padding: 15px; }
+        .scanner-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        #mainScanner { padding: 12px; font-size: 18px; border: 2px solid var(--primary); border-radius: 8px; width: 250px; }
+        .buttons-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+        .btn-action { display: flex; border: 1px solid #ddd; border-radius: 6px; overflow: hidden; }
+        .btn-label { flex: 1; font-size: 11px; font-weight: bold; display: flex; align-items: center; justify-content: center; padding: 5px; }
+        .btn-act { width: 40px; border: none; color: white; font-weight: bold; cursor: pointer; }
+        .btn-start { background: var(--orange); }
+        .btn-stop { background: var(--green); }
     </style>
 </head>
 <body>
@@ -52,35 +51,34 @@
 
 <div id="app">
     <div class="header">
-        <div><h4 style="font-size: 18px; font-weight: 900;">PARTHOS MANAGEMENT</h4><span id="roleLabel" style="font-size: 11px; font-weight: bold;"></span></div>
-        <button onclick="location.reload()" style="background:rgba(255,255,255,0.1); color:white; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; cursor:pointer;">LOGOUT</button>
+        <h4 id="roleLabel">PARTHOS MANAGEMENT</h4>
+        <button onclick="location.reload()" style="background:none; color:white; border:1px solid white; padding:5px 10px; border-radius:5px;">LOGOUT</button>
     </div>
     <div class="main-dashboard" id="board"></div>
     <div class="control-panel">
         <div class="scanner-section">
-            <input type="text" id="mainScanner" placeholder="SCAN BARCODE..." autofocus autocomplete="off">
-            <div id="scanStatus">STATUS: GEREED</div>
+            <input type="text" id="mainScanner" placeholder="SCAN ORDER..." autocomplete="off">
+            <div id="scanStatus" style="font-weight:bold; background:#eee; padding:10px; border-radius:5px;">STATUS: GEREED</div>
         </div>
-        <div id="controls" class="buttons-grid"></div>
+        <div class="buttons-grid" id="controls"></div>
     </div>
 </div>
 
 <script>
     const ACCOUNTS = {
-        "1111": { role: "superadmin", dept: "ALL", label: "AFDELINGSCHEF" },
-        "6666": { role: "worker", dept: "MACH", label: "MACHINALE" },
-        "7777": { role: "worker", dept: "ASSB", label: "ASSEMBLAGE" }
+        "1111": { role: "superadmin", label: "AFDELINGSCHEF", dept: "ALL" },
+        "6666": { role: "worker", label: "MACHINALE", dept: "MACH" }
     };
 
     const depts = [
         { id: 'MPERS', name: 'Machinale Pers', cat: 'MACH' },
         { id: 'MZAAG', name: 'Machinale Zaag', cat: 'MACH' },
-        { id: 'MCNC', name: 'Machinale CNC', cat: 'MACH' },
-        { id: 'AZAAG', name: 'Assemblage ALU Zaag', cat: 'ASSB' },
         { id: 'ASSB', name: 'Assemblage Bords', cat: 'ASSB' }
     ];
 
-    let currentUser = null; let projectsData = {}; let currentOrder = null;
+    let currentUser = null;
+    let projectsData = {};
+    let currentOrder = null;
 
     function attemptLogin() {
         const pin = document.getElementById('passInput').value;
@@ -89,64 +87,88 @@
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('app').style.display = 'flex';
             document.getElementById('roleLabel').innerText = currentUser.label;
-            setupUI(); loadProjects();
-        } else { document.getElementById('passInput').value = ''; }
+            setupButtons();
+            loadProjects();
+        } else {
+            alert("Foutieve PIN");
+            document.getElementById('passInput').value = '';
+        }
     }
 
     function loadProjects() {
-        fetch('/api/projects').then(res => res.json()).then(data => {
-            projectsData = data || {}; renderBoard();
-        }).catch(err => console.error("API Error:", err));
+        fetch('/api/projects')
+            .then(res => res.json())
+            .then(data => {
+                projectsData = data || {};
+                renderBoard();
+            })
+            .catch(err => console.error("Error:", err));
     }
 
     function renderBoard() {
-        const board = document.getElementById('board'); board.innerHTML = '';
+        const board = document.getElementById('board');
+        board.innerHTML = '';
         Object.entries(projectsData).forEach(([key, p]) => {
             let html = `<div class="card" onclick="this.classList.toggle('active')">
-                <div class="order-id">#${p.id}</div><div class="order-name">${p.name || ''}</div>
+                <div class="order-id">#${p.id}</div>
+                <div class="order-name">${p.name || ''}</div>
                 <div class="details-view">`;
+            
             depts.forEach(d => {
                 const s = p.statuses ? p.statuses[d.id] : null;
                 if (s) {
                     const cls = s.status === 1 ? 'orange' : (s.status === 2 ? 'green' : '');
-                    html += `<div class="stat-item ${cls}"><b>${d.name}</b><div style="font-size:10px;">▶ ${s.startTime || '--:--'} | ■ ${s.endTime || '--:--'}</div></div>`;
+                    html += `<div class="stat-item ${cls}">
+                        <b>${d.name}</b>
+                        <div style="display:flex; justify-content:space-between; font-size:10px;">
+                            <span>▶ ${s.startTime || '--'}</span><span>■ ${s.endTime || '--'}</span>
+                        </div>
+                    </div>`;
                 }
             });
             board.innerHTML += html + `</div></div>`;
         });
     }
 
-    function setupUI() {
-        const ctrl = document.getElementById('controls'); ctrl.innerHTML = '';
+    function setupButtons() {
+        const ctrl = document.getElementById('controls');
+        ctrl.innerHTML = '';
         const visible = depts.filter(d => currentUser.role === 'superadmin' || d.cat === currentUser.dept);
         visible.forEach(d => {
-            ctrl.innerHTML += `<div class="btn-action"><div class="btn-label">${d.name}</div>
-                <button class="btn-act btn-start" onclick="handleAction('${d.id}', 1)">▶</button>
-                <button class="btn-act btn-stop" onclick="handleAction('${d.id}', 2)">■</button></div>`;
+            ctrl.innerHTML += `
+                <div class="btn-action">
+                    <div class="btn-label">${d.name}</div>
+                    <button class="btn-act btn-start" onclick="handleAction('${d.id}', 1)">▶</button>
+                    <button class="btn-act btn-stop" onclick="handleAction('${d.id}', 2)">■</button>
+                </div>`;
         });
     }
 
     function handleAction(dId, val) {
-        if(!currentOrder) return alert("SCAN EERST ORDER!");
-        const now = new Date().toLocaleTimeString('nl-NL', {hour:'2-digit', minute:'2-digit'});
+        if (!currentOrder) return alert("SCAN EERST ORDER!");
+        const now = new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
         fetch(`/api/projects/${currentOrder}/status/${dId}`, {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: val, [val === 1 ? 'startTime' : 'endTime']: now })
         }).then(() => loadProjects());
     }
 
     document.getElementById('mainScanner').addEventListener('keydown', e => {
-        if(e.key === 'Enter') {
+        if (e.key === 'Enter') {
             const val = e.target.value.trim();
-            if(projectsData[val]) { 
-                currentOrder = val; document.getElementById('scanStatus').innerText = "ACTIEF: #" + val;
-            } else { alert("ONBEKEND!"); }
+            if (projectsData[val]) {
+                currentOrder = val;
+                document.getElementById('scanStatus').innerText = "ACTIEF: #" + val;
+                document.getElementById('scanStatus').style.background = "var(--orange)";
+            } else {
+                alert("ORDER ONBEKEND");
+            }
             e.target.value = '';
         }
     });
 
-    document.getElementById('passInput').addEventListener('keydown', e => { if(e.key === 'Enter') attemptLogin(); });
-    setInterval(loadProjects, 15000);
+    setInterval(loadProjects, 10000);
 </script>
 </body>
 </html>

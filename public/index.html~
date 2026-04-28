@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Parthos Productie Management</title>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        :root { 
+            --primary: #005581; --secondary: #00a1e1; --bg-color: #f0f4f8; 
+            --white: #ffffff; --orange: #ffa500; --green: #28a745; 
+            --red: #dc3545; --yellow: #ffc107; --dark: #1e293b; 
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', 'Segoe UI', sans-serif; background-color: var(--bg-color); height: 100vh; overflow: hidden; }
+
+        /* LOGIN SCREEN */
+        #loginOverlay { position: fixed; inset: 0; background: #0f172a; display: flex; justify-content: center; align-items: center; z-index: 2000; }
+        .login-box { background: white; padding: 40px; border-radius: 20px; width: 350px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        .login-box input { width: 100%; padding: 15px; margin-bottom: 15px; border-radius: 10px; border: 2px solid #ddd; font-size: 24px; text-align: center; outline: none; }
+        .login-box button { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; text-transform: uppercase; }
+
+        /* APP LAYOUT */
+        #app { display: none; height: 100vh; flex-direction: column; }
+        .header { background: var(--dark); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; color: white; border-bottom: 2px solid var(--secondary); }
+        .main-dashboard { flex: 1; padding: 15px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; overflow-y: auto; }
+        
+        /* CARDS */
+        .card { background: var(--white); border-radius: 6px; padding: 8px 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 6px solid #cbd5e1; cursor: pointer; transition: 0.2s; height: fit-content; }
+        .card.active { transform: scale(1.01); padding: 12px; border-left-width: 10px; }
+        .card.active .order-name, .card.active .details-view { display: block; }
+        
+        .order-id { font-weight: 900; color: var(--primary); font-size: 20px; } 
+        .order-name { display: none; font-size: 14px; color: var(--secondary); margin-bottom: 8px; font-weight: bold; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+        
+        .details-view { display: none; }
+        .stat-item { font-size: 13px; padding: 6px 8px; background: #f8fafc; border-radius: 4px; border: 1px solid #e2e8f0; margin-bottom: 4px; }
+        .stat-item b { font-size: 14px; display: block; margin-bottom: 2px; }
+        .time-info { font-size: 10px; color: #64748b; display: flex; justify-content: space-between; font-weight: 800; border-top: 1px dashed #cbd5e1; margin-top: 4px; padding-top: 2px; }
+
+        .stat-item.orange { background: #fff7ed; border-color: #fdba74; }
+        .stat-item.green { background: #f0fdf4; border-color: #86efac; }
+        .stat-item.red { background: #fef2f2; border-color: var(--red); }
+
+        /* CONTROL PANEL */
+        .control-panel { background: var(--white); border-top: 4px solid var(--primary); padding: 12px 25px; }
+        .scanner-section { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; flex-wrap: nowrap; }
+        
+        #mainScanner { padding: 12px; font-size: 18px; border: 2px solid var(--primary); border-radius: 8px; width: 240px; outline: none; font-weight: bold; }
+        #scanStatus { font-weight: 900; font-size: 14px; background: #e2e8f0; padding: 12px 20px; border-radius: 8px; min-width: 220px; text-align: center; transition: 0.3s; }
+        
+        /* LEGENDA */
+        .legend-container { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+        .legend { display: flex; gap: 20px; font-size: 13px; font-weight: 800; background: #f1f5f9; padding: 10px 18px; border-radius: 8px; border: 2px solid #cbd5e1; }
+        .instruction-text { 
+            font-size: 11px; color: var(--primary); font-weight: 800; 
+            background: #e0f2fe; padding: 6px 12px; border-radius: 6px; 
+            border-left: 5px solid var(--secondary); text-align: right;
+        }
+
+        .buttons-container { max-height: 220px; overflow-y: auto; padding-right: 10px; }
+        .dept-group { margin-bottom: 10px; }
+        .group-title { font-size: 11px; font-weight: 900; color: var(--primary); margin-bottom: 6px; text-transform: uppercase; border-bottom: 1px solid #eee; }
+        .buttons-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+        
+        .btn-action { display: flex; background: white; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; height: 42px; }
+        .btn-label { flex: 1; font-size: 11px; font-weight: 800; padding: 4px; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1.2; }
+        .btn-act { border: none; width: 44px; color: white; cursor: pointer; font-size: 20px; font-weight: bold; }
+        .btn-start { background: var(--orange); } .btn-stop { background: var(--green); } .btn-qc { background: var(--yellow); color: black; }
+
+        #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 20px; width: 500px; }
+
+        /* AFWIJKING FORM SPECIFIC */
+        .form-container { background: #fff; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-width: 950px; margin: 0 auto; }
+        .step-card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 10px; margin-bottom: 15px; position: relative; }
+        .image-upload-box { border: 2px dashed var(--secondary); border-radius: 8px; height: 120px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: #f0f9ff; overflow: hidden; }
+        .image-upload-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+        .only-super, .only-admin { display: none !important; }
+        body.is-super .only-super { display: block !important; }
+        body.is-super .only-admin, body.is-admin .only-admin { display: block !important; }
+    </style>
+</head>
+<body id="mainBody">
+
+<div id="loginOverlay">
+    <div class="login-box">
+        <h2 style="margin-bottom:20px; color: var(--primary);">Parthos</h2>
+        <p style="margin-bottom: 15px; font-weight: 800; color: #64748b;">PRODUCTIE MANAGEMENT</p>
+        <input type="password" id="passInput" placeholder="PINCODE" autofocus>
+        <button onclick="attemptLogin()">INLOGGEN</button>
+    </div>
+</div>
+
+<div id="app">
+    <div class="header">
+        <div>
+            <h4 style="font-size: 18px; font-weight: 900;">PARTHOS PRODUCTIE MANAGEMENT</h4>
+            <span id="roleLabel" style="font-size: 11px; opacity: 0.9; font-weight: bold; letter-spacing: 1px;"></span>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="only-admin" style="background: var(--orange); color:white; border:none; padding:8px 15px; border-radius:8px; font-size: 11px; font-weight:bold; cursor:pointer;" onclick="openDeviationForm()">📋 AFWIJKING FORM</button>
+            <button class="only-super" style="background: var(--green); color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px;" onclick="toggleModal(true)">+ ORDER TOEVOEGEN</button>
+            <button onclick="location.reload()" style="background: rgba(255,255,255,0.1); color:white; border:none; padding:8px 15px; border-radius:8px; font-size: 11px; font-weight:bold;">LOGOUT</button>
+        </div>
+    </div>
+
+    <div class="main-dashboard" id="board"></div>
+
+    <div class="control-panel">
+        <div class="scanner-section">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <input type="text" id="mainScanner" placeholder="SCAN BARCODE..." autofocus autocomplete="off">
+                <div id="scanStatus">STATUS: SYSTEEM GEREED</div>
+            </div>
+
+            <div class="legend-container">
+                <div class="legend">
+                    <div><b style="color:var(--orange)">▶</b> START</div>
+                    <div><b style="color:var(--green)">■</b> KLAAR</div>
+                    <div><b style="color:var(--yellow)">⚠️</b> ONHOLD</div>
+                </div>
+                <div class="instruction-text">
+                    Scan order, klik <b>START</b> als begin met project of <b>STOP</b> als project is klaar.
+                </div>
+            </div>
+        </div>
+        
+        <div class="buttons-container">
+            <div class="dept-group" id="container-MACH"><div class="group-title">🛠 1. Machinale</div><div class="buttons-grid" id="group-MACH"></div></div>
+            <div class="dept-group" id="container-ASSB"><div class="group-title">⚙ 2. Assemblage</div><div class="buttons-grid" id="group-ASSB"></div></div>
+            <div class="dept-group" id="container-METAL"><div class="group-title">🔩 3. Metal</div><div class="buttons-grid" id="group-METAL"></div></div>
+            <div class="dept-group" id="container-LOG"><div class="group-title">📦 4. Logistiek</div><div class="buttons-grid" id="group-LOG"></div></div>
+            <div class="dept-group" id="container-INT"><div class="group-title">🛋 5. Interieur</div><div class="buttons-grid" id="group-INT"></div></div>
+        </div>
+    </div>
+</div>
+
+<div id="modal">
+    <div class="modal-content">
+        <h2 style="margin-bottom: 20px;">Nieuwe Order Toevoegen</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+            <input type="text" id="newID" placeholder="Order nr" style="padding:12px; border-radius:8px; border:1px solid #ccc;">
+            <input type="text" id="newName" placeholder="Project nr / Klant" style="padding:12px; border-radius:8px; border:1px solid #ccc;">
+        </div>
+        <div id="deptList" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; background:#f1f5f9; padding:15px; border-radius:10px; max-height: 250px; overflow-y: auto; margin-bottom: 20px;"></div>
+        <button onclick="saveProject()" style="width:100%; padding:15px; background:var(--primary); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">ORDER OPSLAAN</button>
+        <button onclick="toggleModal(false)" style="width:100%; margin-top:10px; background:none; border:none; color:gray; cursor:pointer;">Annuleren</button>
+    </div>
+</div>
+
+<div id="deviationOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:3000; overflow-y:auto; padding:20px;">
+    <div style="text-align: right; max-width: 950px; margin: 0 auto; margin-bottom: 10px;">
+        <button onclick="closeDeviationForm()" style="background:var(--red); color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">SLUITEN</button>
+    </div>
+    <div class="form-container">
+        <h2 style="color:var(--primary); margin-bottom:20px;">📍 AFWIJKINGENFORMULIER</h2>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px;">
+            <div><label style="font-size:12px; font-weight:bold;">Project nr:</label><input type="text" id="project_num" style="width:100%; padding:8px;"></div>
+            <div><label style="font-size:12px; font-weight:bold;">Klant/Order:</label><input type="text" id="order_num" style="width:100%; padding:8px;"></div>
+            <div><label style="font-size:12px; font-weight:bold;">Controleur:</label><input type="text" id="controller" style="width:100%; padding:8px;"></div>
+            <div><label style="font-size:12px; font-weight:bold;">Datum:</label><input type="date" id="date" style="width:100%; padding:8px;"></div>
+        </div>
+
+        <div id="steps-container"></div>
+
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button onclick="addStep()" style="flex:1; padding:15px; background:var(--secondary); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">➕ AFWIJKING TOEVOEGEN</button>
+            <button onclick="generatePDF()" style="flex:1; padding:15px; background:var(--primary); color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">📄 PDF GENEREREN</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyB4nJ-lxmmgIgTbjsXyCwpWO5lAuFtpPt0",
+        authDomain: "parthos-terminal-flow.firebaseapp.com",
+        databaseURL: "https://parthos-terminal-flow-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "parthos-terminal-flow"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const ACCOUNTS = {
+        "1111": { role: "superadmin", dept: "ALL", label: "AFDELINGSCHEF" },
+        "2222": { role: "admin", dept: "MACH", label: "MACHINALE ASSISTANT" },
+        "3333": { role: "admin", dept: "ASSB_METAL", label: "ASSEMBLAGE  & METAL ASSISTANT " },
+        "4444": { role: "worker", dept: "LOG", label: "LOGISTIEK" },
+        "5555": { role: "worker", dept: "INT", label: "INTERIEUR" },
+        "6666": { role: "worker", dept: "MACH", label: "MACHINALE" },
+        "7777": { role: "worker", dept: "ASSB", label: "ASSEMBLAGE" },
+        "8888": { role: "worker", dept: "METAL", label: "METAL" }
+    };
+
+    const depts = [
+        { id: 'MPERS', name: 'Machinale Pers', cat: 'MACH' }, { id: 'MHOLZ', name: 'Machinale HOLZ-HER', cat: 'MACH' },
+        { id: 'MZAAG', name: 'Machinale Zaag', cat: 'MACH' }, { id: 'MCNC', name: 'Machinale CNC', cat: 'MACH' },
+        { id: 'AZAAG', name: 'Assemblage ALU Zaag', cat: 'ASSB' }, { id: 'ACNC', name: 'Assemblage ALU CNC', cat: 'ASSB' },
+        { id: 'ASSB', name: 'Assemblage Bords', cat: 'ASSB' }, { id: 'APROF', name: 'Assemblage Profile', cat: 'ASSB' },
+        { id: 'ASSF', name: 'Assemblage Frames', cat: 'ASSB' }, { id: 'PRES', name: 'President', cat: 'ASSB' },
+        { id: 'PHON', name: 'Phonic', cat: 'ASSB' }, { id: 'INP', name: 'Inpak', cat: 'ASSB' },
+        { id: 'WP', name: 'WP', cat: 'ASSB' }, 
+        { id: 'MET_CUT', name: 'Metal Snijden', cat: 'METAL' }, { id: 'MET_WELD', name: 'Metal Lassen', cat: 'METAL' }, { id: 'MET_RAIL', name: 'Rail', cat: 'METAL' },
+        { id: 'LOG_GEN', name: 'Logistiek', cat: 'LOG' },
+        { id: 'INT_GEN', name: 'Interieur', cat: 'INT' }
+    ];
+
+    let currentUser = null; let projectsData = {}; let currentOrder = null; let stepCount = 0;
+
+    function attemptLogin() {
+        const pin = document.getElementById('passInput').value;
+        if (ACCOUNTS[pin]) {
+            currentUser = ACCOUNTS[pin];
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('app').style.display = 'flex';
+            setupUI();
+        } else {
+            document.getElementById('passInput').value = '';
+        }
+    }
+
+    function setupUI() {
+        if(currentUser.role === 'superadmin') document.body.classList.add('is-super');
+        if(currentUser.role === 'admin') document.body.classList.add('is-admin');
+        document.getElementById('roleLabel').innerText = currentUser.label;
+
+        let visibleCats = (currentUser.role === 'superadmin' || currentUser.role === 'admin') ? ['MACH', 'ASSB', 'METAL', 'LOG', 'INT'] : [currentUser.dept];
+
+        db.ref('projects').on('value', snap => {
+            projectsData = snap.val() || {};
+            const board = document.getElementById('board'); board.innerHTML = '';
+            Object.entries(projectsData).forEach(([key, p]) => {
+                const hasRel = depts.some(d => p.statuses && p.statuses[d.id] && visibleCats.includes(d.cat));
+                if (currentUser.role !== 'superadmin' && !hasRel) return;
+                
+                let html = `<div class="card" onclick="this.classList.toggle('active')">
+                    <div class="order-id">#${p.id}</div><div class="order-name">${p.name || 'Geen naam'}</div>
+                    <div class="details-view">`;
+                
+                depts.forEach(d => {
+                    const s = p.statuses ? p.statuses[d.id] : null;
+                    if(s && visibleCats.includes(d.cat)) {
+                        const cls = s.status === 1 ? 'orange' : (s.status === 2 ? 'green' : (s.status === 3 ? 'red' : ''));
+                        
+                        let startT = "--:--";
+                        if (s.startTime) {
+                            const parts = s.startTime.split(', ');
+                            const datePart = parts[0].substring(0, 5);
+                            const timePart = parts[1].substring(0, 5);
+                            startT = `${datePart} ${timePart}`;
+                        }
+
+                        let endT = "--:--";
+                        if (s.endTime) {
+                            const parts = s.endTime.split(', ');
+                            const datePart = parts[0].substring(0, 5);
+                            const timePart = parts[1].substring(0, 5);
+                            endT = `${datePart} ${timePart}`;
+                        }
+
+                        html += `<div class="stat-item ${cls}">
+                            <b>${d.name}</b>
+                            <div class="time-info"><span>▶ ${startT}</span> <span>■ ${endT}</span></div>`;
+                        
+                        if (s.status === 3 && s.problemDescription) {
+                            html += `
+                            <div style="margin-top: 5px; padding: 5px; background: rgba(220, 53, 69, 0.1); border-radius: 4px; border-left: 3px solid var(--red); font-size: 11px; color: var(--red); font-weight: bold;">
+                                ⚠️ ${s.problemDescription}
+                            </div>`;
+                        }
+                        html += `</div>`;
+                    }
+                });
+                
+                if(currentUser.role === 'superadmin') html += `<div onclick="event.stopPropagation(); if(confirm('Order archiveren/verwijderen?')) db.ref('projects/${key}').remove()" style="color:red; font-size:11px; margin-top:8px; text-align:right; font-weight:bold; cursor:pointer;">[ ARCHIVEREN ]</div>`;
+                board.innerHTML += html + `</div></div>`;
+            });
+        });
+
+        const containers = { 'MACH': document.getElementById('group-MACH'), 'ASSB': document.getElementById('group-ASSB'), 'METAL': document.getElementById('group-METAL'), 'LOG': document.getElementById('group-LOG'), 'INT': document.getElementById('group-INT') };
+        Object.values(containers).forEach(c => c.innerHTML = '');
+        visibleCats.forEach(cat => {
+            depts.filter(d => d.cat === cat).forEach(d => {
+                const isAdmin = (currentUser.role === 'admin' || currentUser.role === 'superadmin');
+                let buttonsHtml = `
+                    <div class="btn-action">
+                        <div class="btn-label">${d.name}</div>
+                        <button class="btn-act btn-start" onclick="handleAction('${d.id}', 1)">▶</button>
+                        <button class="btn-act btn-stop" onclick="handleAction('${d.id}', 2)">■</button>`;
+                if (isAdmin) {
+                    buttonsHtml += `<button class="btn-act btn-qc" onclick="handleAction('${d.id}', 3)">⚠️</button>`;
+                }
+                buttonsHtml += `</div>`;
+                containers[cat].innerHTML += buttonsHtml;
+            });
+        });
+        ['MACH','ASSB','METAL','LOG','INT'].forEach(cat => document.getElementById('container-'+cat).style.display = (containers[cat].innerHTML) ? 'block' : 'none');
+    }
+
+    function handleAction(dId, val) {
+        if(!currentOrder) { showScanError("SCAN EERST EEN ORDER!"); return; }
+        const project = projectsData[currentOrder];
+        if (!project.statuses || !project.statuses[dId]) { 
+            showScanError("NIET VOOR DIT PROJECT!"); 
+            return; 
+        }
+
+        const now = new Date().toLocaleString('nl-NL', { hour12: false });
+        let updateData = (val === 1) ? { startTime: now, error: false } : { endTime: now, error: (val === 3) };
+        updateData.status = val;
+
+        if (val === 3 && (currentUser.role === 'admin' || currentUser.role === 'superadmin')) {
+            const problemDesc = prompt("Wat is het probleem? Voer hier de beschrijving in:");
+            if (problemDesc === null) return;
+            if (problemDesc.trim() !== "") {
+                updateData.problemDescription = problemDesc;
+            } else {
+                alert("Beschrijving is verplicht voor deze actie.");
+                return;
+            }
+        }
+        db.ref(`projects/${currentOrder}/statuses/${dId}`).update(updateData).then(() => resetScanner());
+    }
+
+    function showScanError(msg) {
+        const el = document.getElementById('scanStatus');
+        const oldText = el.innerText;
+        el.innerText = msg; el.style.background = "var(--red)"; el.style.color = "white";
+        setTimeout(() => { el.innerText = oldText; el.style.background = "#e2e8f0"; el.style.color = "black"; }, 3000);
+    }
+
+    function resetScanner() {
+        currentOrder = null; document.getElementById('mainScanner').value = '';
+        document.getElementById('scanStatus').innerText = "STATUS: SYSTEEM GEREED";
+        document.getElementById('scanStatus').style.background = "#e2e8f0";
+    }
+
+    document.getElementById('mainScanner').addEventListener('keydown', e => {
+        if(e.key === 'Enter') {
+            const val = e.target.value.trim();
+            if(projectsData[val]) { 
+                currentOrder = val; 
+                document.getElementById('scanStatus').innerText = "ACTIEF: #" + val;
+                document.getElementById('scanStatus').style.background = "var(--yellow)";
+            } else { showScanError("ORDER ONBEKEND!"); }
+            e.target.value = '';
+        }
+    });
+
+    function toggleModal(s) { 
+        document.getElementById('modal').style.display = s ? 'flex' : 'none'; 
+        if(s) document.getElementById('deptList').innerHTML = depts.map(d => `<label style="display:flex; gap:10px; font-size:13px; font-weight:bold; margin-bottom:5px;"><input type="checkbox" value="${d.id}"> ${d.name}</label>`).join('');
+    }
+
+    function saveProject() {
+        const id = document.getElementById('newID').value.trim();
+        const name = document.getElementById('newName').value.trim();
+        const sel = Array.from(document.querySelectorAll('#deptList input:checked')).map(cb => cb.value);
+        if(!id || !sel.length) return alert("Kies een Order nr en afdelingen!");
+        let sts = {}; sel.forEach(dId => sts[dId] = { status: 0 });
+        db.ref('projects/' + id).set({ id, name, statuses: sts }).then(() => {
+            document.getElementById('newID').value = '';
+            document.getElementById('newName').value = '';
+            toggleModal(false);
+        });
+    }
+
+    // --- KROK 4: Logika JavaScript (Integracja danych) ---
+    function openDeviationForm() {
+        document.getElementById('deviationOverlay').style.display = 'block';
+        document.getElementById('steps-container').innerHTML = '';
+        stepCount = 0;
+        addStep();
+        
+        if (currentOrder) {
+            document.getElementById('project_num').value = currentOrder;
+            const project = projectsData[currentOrder];
+            if (project && project.name) {
+                document.getElementById('order_num').value = project.name;
+            }
+        }
+        document.getElementById('date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('controller').value = currentUser ? currentUser.label : "";
+    }
+
+    function closeDeviationForm() {
+        document.getElementById('deviationOverlay').style.display = 'none';
+    }
+
+    function addStep() {
+        stepCount++;
+        const html = `
+            <div class="step-card" id="step_${stepCount}">
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <b>AFWIJKING #${stepCount}</b>
+                    <button onclick="this.parentElement.parentElement.remove()" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">Verwijder</button>
+                </div>
+                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:15px;">
+                    <textarea id="obs_${stepCount}" placeholder="Omschrijving van de afwijking..." style="width:100%; height:120px; padding:10px; border-radius:8px; border:1px solid #ccc;"></textarea>
+                    <div class="image-upload-box" onclick="document.getElementById('img_${stepCount}').click()">
+                        <span id="label_${stepCount}">📸 FOTO TOEVOEGEN</span>
+                        <img id="prev_${stepCount}" style="display:none;">
+                        <input type="file" id="img_${stepCount}" hidden accept="image/*" onchange="handleImage(this, '${stepCount}')">
+                    </div>
+                </div>
+            </div>`;
+        document.getElementById('steps-container').insertAdjacentHTML('beforeend', html);
+    }
+
+    function handleImage(input, id) {
+        const file = input.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const img = document.getElementById('prev_'+id);
+                img.src = e.target.result; img.style.display = 'block';
+                document.getElementById('label_'+id).style.display = 'none';
+            }
+            reader.readAsDataURL(file);
+        }
+    }
+
+    async function generatePDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        doc.setFont("helvetica", "bold");
+        doc.text("PARTHOS AFWIJKINGENFORMULIER", 20, 20);
+        
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Project nr: ${document.getElementById('project_num').value}`, 20, 30);
+        doc.text(`Klant/Order: ${document.getElementById('order_num').value}`, 20, 35);
+        doc.text(`Controleur: ${document.getElementById('controller').value}`, 20, 40);
+        doc.text(`Datum: ${document.getElementById('date').value}`, 20, 45);
+        
+        let y = 60;
+        const cards = document.querySelectorAll('.step-card');
+        
+        for(let card of cards) {
+            const id = card.id.split('_')[1];
+            const text = document.getElementById('obs_'+id).value;
+            const img = document.getElementById('prev_'+id);
+            
+            doc.setFont("helvetica", "bold");
+            doc.text(`Afwijking #${id}:`, 20, y);
+            doc.setFont("helvetica", "normal");
+            
+            // Zawijanie tekstu
+            const splitText = doc.splitTextToSize(text, 160);
+            doc.text(splitText, 20, y + 7);
+            y += (splitText.length * 7) + 10;
+
+            if(img && img.src && img.src.startsWith('data')) {
+                try {
+                    doc.addImage(img.src, 'JPEG', 20, y, 60, 45);
+                    y += 55;
+                } catch(e) { console.error(e); }
+            }
+            
+            if(y > 250) { doc.addPage(); y = 20; }
+        }
+        
+        doc.save(`Afwijking_${document.getElementById('project_num').value || 'Export'}.pdf`);
+    }
+
+    setInterval(() => { 
+        if(currentUser && document.activeElement.id !== 'mainScanner' && 
+           document.getElementById('modal').style.display !== 'flex' && 
+           document.getElementById('deviationOverlay').style.display !== 'block') {
+            document.getElementById('mainScanner').focus(); 
+        }
+    }, 1500);
+
+    document.getElementById('passInput').addEventListener('keydown', e => { if(e.key === 'Enter') attemptLogin(); });
+
+<script>
+    // 1. KONFIGURACJA DZIAŁÓW (Dopasuj do swojej pracy)
+    const depts = [
+        { id: 'dept1', name: 'Zagen', cat: 'prod' },
+        { id: 'dept2', name: 'Boren', cat: 'prod' },
+        { id: 'dept3', name: 'Assemblage', cat: 'prod' }
+    ];
+
+    let projectsData = {};
+    let currentUser = { role: 'superadmin' }; // Na razie na sztywno, żebyś mógł wejść
+
+    // 2. FUNKCJA POBIERANIA DANYCH Z TWOJEGO RENDERA
+    function loadProjects() {
+        // Używamy /api/projects, bo serwer i HTML są w tym samym miejscu
+        fetch('/api/projects')
+            .then(res => res.json())
+            .then(data => {
+                projectsData = data || {};
+                renderBoard();
+            })
+            .catch(err => console.error("Błąd pobierania danych:", err));
+    }
+
+    // 3. GENEROWANIE KART NA EKRANIE
+    function renderBoard() {
+        const board = document.getElementById('main-dashboard'); // Sprawdź czy ID się zgadza z Twoim HTML
+        if (!board) return;
+        board.innerHTML = '';
+
+        Object.entries(projectsData).forEach(([key, p]) => {
+            let html = `
+                <div class="card" onclick="this.classList.toggle('active')">
+                    <div class="order-id">#${p.id}</div>
+                    <div class="order-name">${p.name || 'Geen naam'}</div>
+                    <div class="details-view">`;
+
+            depts.forEach(d => {
+                const s = p.statuses ? p.statuses[d.id] : null;
+                if (s) {
+                    let cls = '';
+                    if (s.status === 1) cls = 'orange';
+                    if (s.status === 2) cls = 'green';
+                    if (s.status === 3) cls = 'red';
+
+                    html += `
+                        <div class="stat-item ${cls}">
+                            <b>${d.name}</b>
+                            <div class="time-info">
+                                <span>▶ ${s.startTime || '--'}</span>
+                                <span>■ ${s.endTime || '--'}</span>
+                            </div>
+                        </div>`;
+                }
+            });
+
+            html += `</div></div>`;
+            board.innerHTML += html;
+        });
+    }
+
+    // 4. PROSTY LOGIN (Omijamy Firebase)
+    function checkLogin() {
+        const pin = document.getElementById('loginPin').value;
+        if (pin === '1234') { // Twoje tymczasowe hasło do terminala
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('app').style.display = 'flex';
+            loadProjects();
+        } else {
+            alert('Foutieve PIN');
+        }
+    }
+
+    // Odświeżaj dane co 30 sekund (przydatne w pracy)
+    setInterval(loadProjects, 30000);
+</script>
+</body>
+</html>

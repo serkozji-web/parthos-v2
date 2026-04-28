@@ -15,11 +15,9 @@ app.use(express.static('public'));
 app.use('/api/projects', require('./routes/projects'));
 
 // Fallback dla SPA (Naprawiony błąd SyntaxError)
-app.get('(.*)', (req, res) => {
-  if (req.path.includes('.')) {
-    return res.status(404).send('Not found');
-  }
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+app.get('*', (req, res) => {
+    if (req.path.includes('.')) return res.status(404).send('Not found');
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Port
